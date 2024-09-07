@@ -56,6 +56,10 @@ Box boxWalls;
 Box boxHighway;
 Box boxLandingPad;
 Sphere esfera1(10, 10);
+
+// Creamos una esfera
+Sphere esfera2(10, 10);
+
 // Models complex instances
 Model modelRock;
 Model modelAircraft;
@@ -82,6 +86,7 @@ Model modelDartLegoRightHand;
 Model modelDartLegoLeftLeg;
 Model modelDartLegoRightLeg;
 
+// variables para las texturas
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint skyboxTextureID;
 
@@ -93,6 +98,8 @@ GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
 GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
 GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
 
+
+// path de las texturas
 std::string fileNames[6] = { "../Textures/mp_bloodvalley/blood-valley_ft.tga",
 		"../Textures/mp_bloodvalley/blood-valley_bk.tga",
 		"../Textures/mp_bloodvalley/blood-valley_up.tga",
@@ -231,8 +238,21 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	boxLandingPad.init();
 	boxLandingPad.setShader(&shaderMulLighting);
 
+	// Inicializamos la esfera
 	esfera1.init();
 	esfera1.setShader(&shaderMulLighting);
+	
+	// Inicializacion de la esfera
+	esfera2.init();
+	// Configuracion del shader
+	esfera2.setShader(&shaderMulLighting);
+	// vec3 (x, y (altura), z(profundidad))
+
+	// si son posiciones o valores estaticos de la figura se colocan fuera del loop
+	esfera2.setPosition(glm::vec3(1.0f, 10.0f, 0.0f));
+
+	// transforamcion no isomorfica: no matiene la forma al momento de escalar
+	esfera2.setScale(glm::vec3(2.0f, 2.0f, 2.0f));
 
 	modelRock.loadModel("../models/rock/rock.obj");
 	modelRock.setShader(&shaderMulLighting);
@@ -430,22 +450,31 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureHighway.freeImage();
 
 	// Definiendo la textura
+	// se indica la ruta donde esta la textura
 	Texture textureLandingPad("../Textures/landingPad.jpg");
-	textureLandingPad.loadImage(); // Cargar la textura
+	textureLandingPad.loadImage(); // Cargar la textura 
 	glGenTextures(1, &textureLandingPadID); // Creando el id de la textura del landingpad
 	glBindTexture(GL_TEXTURE_2D, textureLandingPadID); // Se enlaza la textura
+
+	// Wrapping, el comportamiento cuando pasa el wrapping
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Wrapping en el eje u
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Wrapping en el eje v
+	
+	// Filtering: define como la textura se va a comportar
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // Filtering de minimización
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Filtering de maximimizacion
+
+	// si la textura se cargo correctamente
 	if(textureLandingPad.getData()){
 		// Transferir los datos de la imagen a la tarjeta
 		glTexImage2D(GL_TEXTURE_2D, 0, textureLandingPad.getChannels() == 3 ? GL_RGB : GL_RGBA, textureLandingPad.getWidth(), textureLandingPad.getHeight(), 0,
 		textureLandingPad.getChannels() == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, textureLandingPad.getData());
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
-	else 
+	else {
 		std::cout << "Fallo la carga de textura" << std::endl;
+	}
+	
 	textureLandingPad.freeImage(); // Liberamos memoria
 }
 
@@ -687,14 +716,23 @@ void applicationLoop() {
 	keyFramesDartJoints = getKeyRotFrames(fileName);
 	keyFramesDart = getKeyFrames("../animaciones/animation_dart.txt");
 
+	// Tiempo actual
 	lastTime = TimeManager::Instance().GetTime();
 
 	while (psi) {
+		// Tiempo de ejecucion
 		currTime = TimeManager::Instance().GetTime();
-		if(currTime - lastTime < 0.016666667){
+		// resta el tiempo de ejecucion con el actual para
+		// obtener los frames por segundos
+		// frame rate = 1 / 60 = 0.0166666 = 6fps
+
+		// Espera hasta que se estabilicen los 60 fps
+		if(currTime - lastTime < 0.016666667) {
 			glfwPollEvents();
 			continue;
 		}
+
+
 		lastTime = currTime;
 		TimeManager::Instance().CalculateFrameRate(true);
 		deltaTime = TimeManager::Instance().DeltaTime;
@@ -853,6 +891,22 @@ void applicationLoop() {
 		esfera1.enableWireMode();
 		esfera1.render();
 		esfera1.enableFillMode();
+
+
+		/**********************************
+		 * Esfera 2
+		 */
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textureWindowID);
+		// para indicar que es la textura 0
+		// revisamos en el shader como tenemos nombrada la variable
+		shaderMulLighting.setInt("texture1", 0);
+		
+		// muestra unicamente la malla de la esfera
+		esfera2.enableWireMode();
+		esfera2.render();
+		// devuelve el relleno a las siguientes esfereas
+		esfera2.enableFillMode();
 
 		/******************************************
 		 * Landing pad
