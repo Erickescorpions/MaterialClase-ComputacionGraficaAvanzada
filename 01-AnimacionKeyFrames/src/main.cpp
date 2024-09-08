@@ -116,6 +116,10 @@ float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRig
 int modelSelected = 0;
 bool enableCountSelected = true;
 
+// Variables para la maquina de estados del Eclipse ====================================
+const float avance = 0.1f;
+float giroEclipse = 0.5f;
+
 // Variables to animations keyframes
 bool saveFrame = false, availableSave = true;
 std::ofstream myfile;
@@ -996,6 +1000,82 @@ void applicationLoop() {
 
 		// Constantes de animaciones
 		rotHelHelY += 0.5;
+		
+
+		// Maquina de estados del eclipse =====================
+		// numberAdvance: indica en que cacho estamos
+		switch (state)
+		{
+		case 0:
+			if ( numberAdvance == 0 )
+			{	
+				maxAdvance = 65.0; //Cuanto se va a mover en ese cacho
+			}
+			else if ( numberAdvance == 1 )
+			{
+				maxAdvance = 50.0;
+			}
+			else if ( numberAdvance == 2 )
+			{
+				maxAdvance = 45.0;
+			}
+			else if ( numberAdvance == 3 )
+			{
+				maxAdvance = 50.0;
+			}
+			else if ( numberAdvance == 4 )
+			{
+				maxAdvance = 45.0;
+			}
+
+			state = 1;		
+			break;
+		
+		// Comienza el movimiento de "Avance" en la carretera recta
+		case 1:
+			modelMatrixEclipse = glm::translate( modelMatrixEclipse, glm::vec3( 0, 0, avance ) );
+			advanceCount += avance;
+			rotWheelsX += 0.05;
+			rotWheelsY -= 0.02;
+
+			if(rotWheelsY < 0) {
+				rotWheelsY = 0;
+			}
+
+			// Si ya finalizo el tramo de carretera, cambia de estado
+			if( advanceCount > maxAdvance ){
+				advanceCount = 0;
+				numberAdvance++;
+				state = 2;
+			}
+			break;
+		
+		// Rota las llantas para hacer una vuelta de 90 grados
+		case 2:
+			modelMatrixEclipse = glm::translate( modelMatrixEclipse, glm::vec3( 0, 0, 0.025 ) );
+			modelMatrixEclipse = glm::rotate( modelMatrixEclipse, glm::radians( giroEclipse ), glm::vec3( 0, 1, 0 ) );
+			rotCount += giroEclipse;
+			rotWheelsY += 0.02;
+			
+			if(rotWheelsY > 0.25) {
+				rotWheelsY = 0.25; 
+			}
+
+			// Si ya roto los 90 grados, vuelve al inicio de la maquina de estados
+			if (rotCount >= 90.0f ) {
+				rotCount = 0;
+				state = 0;
+				if(numberAdvance > 4) {
+					numberAdvance = 1;
+				}
+			}
+			
+			break;
+		
+		default:
+			break;
+		}
+
 
 		glfwSwapBuffers(window);
 	}
