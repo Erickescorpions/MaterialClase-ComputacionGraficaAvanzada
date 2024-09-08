@@ -21,6 +21,7 @@
 #include "Headers/Cylinder.h"
 #include "Headers/Box.h"
 #include "Headers/FirstPersonCamera.h"
+#include "Headers/Terrain.h"
 
 //GLM include
 #define GLM_FORCE_RADIANS
@@ -49,6 +50,8 @@ Shader shaderSkybox;
 Shader shaderMulLighting;
 
 std::shared_ptr<FirstPersonCamera> camera(new FirstPersonCamera());
+
+Terrain terrain = Terrain(-1, -1, 500, 50, "../Textures/heightmap.png");
 
 Sphere skyboxSphere(20, 20);
 Box boxCesped;
@@ -256,6 +259,9 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	shader.initialize("../Shaders/colorShader.vs", "../Shaders/colorShader.fs");
 	shaderSkybox.initialize("../Shaders/skyBox.vs", "../Shaders/skyBox.fs");
 	shaderMulLighting.initialize("../Shaders/iluminacion_textura_animation.vs", "../Shaders/multipleLights.fs");
+
+	terrain.init();
+	terrain.setShader(&shaderMulLighting);
 
 	// Inicializacion de los objetos.
 	skyboxSphere.init();
@@ -534,6 +540,8 @@ void destroy() {
 	shader.destroy();
 	shaderMulLighting.destroy();
 	shaderSkybox.destroy();
+
+	terrain.destroy();
 
 	// Basic objects Delete
 	skyboxSphere.destroy();
@@ -907,15 +915,21 @@ void applicationLoop() {
 		/*******************************************
 		 * Cesped
 		 *******************************************/
-		glm::mat4 modelCesped = glm::mat4(1.0);
-		modelCesped = glm::translate(modelCesped, glm::vec3(0.0, 0.0, 0.0));
-		modelCesped = glm::scale(modelCesped, glm::vec3(200.0, 0.001, 200.0));
-		// Se activa la textura del agua
+		// glm::mat4 modelCesped = glm::mat4(1.0);
+		// modelCesped = glm::translate(modelCesped, glm::vec3(0.0, 0.0, 0.0));
+		// modelCesped = glm::scale(modelCesped, glm::vec3(200.0, 0.001, 200.0));
+		// // Se activa la textura del agua
+		// glActiveTexture(GL_TEXTURE0);
+		// glBindTexture(GL_TEXTURE_2D, textureCespedID);
+		// shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(200, 200)));
+		// boxCesped.render(modelCesped);
+		// shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(0, 0)));
+		// glBindTexture(GL_TEXTURE_2D, 0);
+
+		// agregamos el mapa de alturas
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textureCespedID);
-		shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(200, 200)));
-		boxCesped.render(modelCesped);
-		shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(0, 0)));
+		terrain.render();
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		/*******************************************
