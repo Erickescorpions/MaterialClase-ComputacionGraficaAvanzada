@@ -82,6 +82,28 @@ Model modelDartLegoRightHand;
 Model modelDartLegoLeftLeg;
 Model modelDartLegoRightLeg;
 
+//=================================================Buzz=======================================================
+Model modelBuzzHead;
+Model modelBuzzHip;
+Model modelBuzzLeftArm;
+Model modelBuzzleftCalf;
+Model modelBuzzleftFoot;
+Model modelBuzzLeftForearm;
+Model modelBuzzLeftHand;
+Model modelBuzzLeftThigh;
+Model modelBuzzLeftWing1;
+Model modelBuzzLeftWing2;
+Model modelBuzzRightArm;
+Model modelBuzzRightCalf;
+Model modelBuzzRightFoot;
+Model modelBuzzRightForearm;
+Model modelBuzzRightHand;
+Model modelBuzzRightThigh;
+Model modelBuzzRightWing1;
+Model modelBuzzRightWing2;
+Model modelBuzzTorso;
+
+
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint skyboxTextureID;
 
@@ -287,6 +309,48 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	modelDartLegoLeftLeg.setShader(&shaderMulLighting);
 	modelDartLegoRightLeg.loadModel("../models/LegoDart/LeoDart_right_leg.obj");
 	modelDartLegoRightLeg.setShader(&shaderMulLighting);
+
+
+	//==============================================Buzz============================================================================
+	modelBuzzHead.loadModel( "../models/buzz/buzzlightyHead.obj");
+	modelBuzzHead.setShader(&shaderMulLighting);
+	modelBuzzHip.loadModel( "../models/buzz/buzzlightyHip.obj");
+	modelBuzzHip.setShader(&shaderMulLighting);
+	modelBuzzLeftArm.loadModel( "../models/buzz/buzzlightyLeftArm.obj");
+	modelBuzzLeftArm.setShader(&shaderMulLighting);
+	modelBuzzleftCalf.loadModel("../models/buzz/buzzlightyLeftCalf.obj");
+	modelBuzzleftCalf.setShader(&shaderMulLighting);
+	modelBuzzleftFoot.loadModel("../models/buzz/buzzlightyLeftFoot.obj");
+	modelBuzzleftFoot.setShader(&shaderMulLighting);
+	modelBuzzRightArm.loadModel( "../models/buzz/buzzlightyRightArm.obj");
+	modelBuzzRightArm.setShader(&shaderMulLighting);
+	modelBuzzRightCalf.loadModel("../models/buzz/buzzlightyRightCalf.obj");
+	modelBuzzRightCalf.setShader(&shaderMulLighting);
+	modelBuzzRightFoot.loadModel("../models/buzz/buzzlightyRightFoot.obj");
+	modelBuzzRightFoot.setShader(&shaderMulLighting);
+	modelBuzzLeftForearm.loadModel("../models/buzz/buzzlightyLeftForearm.obj");
+	modelBuzzLeftForearm.setShader(&shaderMulLighting);
+	modelBuzzRightForearm.loadModel("../models/buzz/buzzlightyRightForearm.obj");
+	modelBuzzRightForearm.setShader(&shaderMulLighting);
+	modelBuzzLeftHand.loadModel("../models/buzz/buzzlightyLeftHand.obj");
+	modelBuzzLeftHand.setShader(&shaderMulLighting);
+	modelBuzzRightHand.loadModel("../models/buzz/buzzlightyRightHand.obj");
+	modelBuzzRightHand.setShader(&shaderMulLighting);
+	modelBuzzLeftThigh.loadModel("../models/buzz/buzzlightyLeftThigh.obj");
+	modelBuzzLeftThigh.setShader(&shaderMulLighting);
+	modelBuzzRightThigh.loadModel("../models/buzz/buzzlightyRightThigh.obj");
+	modelBuzzRightThigh.setShader(&shaderMulLighting);
+	modelBuzzLeftWing1.loadModel("../models/buzz/buzzlightyLeftWing1.obj");
+	modelBuzzLeftWing1.setShader(&shaderMulLighting);
+	modelBuzzLeftWing2.loadModel("../models/buzz/buzzlightyLeftWing2.obj");
+	modelBuzzLeftWing2.setShader(&shaderMulLighting);
+	modelBuzzRightWing1.loadModel("../models/buzz/buzzlightyRightWing1.obj");
+	modelBuzzRightWing1.setShader(&shaderMulLighting);
+	modelBuzzRightWing2.loadModel("../models/buzz/buzzlightyRightWing2.obj");
+	modelBuzzRightWing2.setShader(&shaderMulLighting);
+	modelBuzzTorso.loadModel("../models/buzz/buzzlightyTorso.obj");
+	modelBuzzTorso.setShader(&shaderMulLighting);
+
 
 	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
 	
@@ -1024,6 +1088,94 @@ void applicationLoop() {
 		// Se regresa el cull faces IMPORTANTE para la capa
 		glEnable(GL_CULL_FACE);
 
+				//=====================================================================Buzz=====================================================
+		// Deshabilitar el cull faces, si es necesario para Buzz también
+		glDisable(GL_CULL_FACE);
+
+		// Matriz principal para Buzz Lightyear, puedes ajustarla para colocarlo frente a Darth Vader
+		glm::mat4 modelMatrixBuzz = glm::mat4(1.0f);
+		modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(0.0, 0.5, 20.4));  // Colocamos a Buzz enfrente de Darth Vader
+		modelMatrixBuzz = glm::scale(modelMatrixBuzz, glm::vec3(1.5, 1.5, 1.5)); // Ajustamos escala para que este del vuelo que Dart
+
+		// Rotar a Buzz 180 grados en el eje Y para que quede cara a cara con Darth
+		modelMatrixBuzz = glm::rotate(modelMatrixBuzz, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+		// Renderizar torso de Buzz Lightyear
+		glm::mat4 modelMatrixBuzzTorso = glm::mat4(modelMatrixBuzz);
+		modelBuzzTorso.render(modelMatrixBuzzTorso);
+
+		modelBuzzHip.render(modelMatrixBuzzTorso);
+
+		// Renderizar cabeza de Buzz Lightyear
+		glm::mat4 modelMatrixBuzzHead = glm::mat4(modelMatrixBuzzTorso);
+		//modelMatrixBuzzHead = glm::translate(modelMatrixBuzzHead, glm::vec3(0.0, 1.0, 0.0)); // Ajusta la posición de la cabeza
+		modelBuzzHead.render(modelMatrixBuzzHead);
+
+		// Renderizar brazo izquierdo
+		glm::mat4 modelMatrixBuzzLeftArm = glm::mat4(modelMatrixBuzzTorso);
+		modelBuzzLeftArm.render(modelMatrixBuzzLeftArm);
+
+		// Renderizar antebrazo izquierdo
+		glm::mat4 modelMatrixBuzzLeftForearm = glm::mat4(modelMatrixBuzzLeftArm);
+		modelBuzzLeftForearm.render(modelMatrixBuzzLeftForearm);
+
+		// Renderizar mano izquierda
+		glm::mat4 modelMatrixBuzzLeftHand = glm::mat4(modelMatrixBuzzLeftForearm);
+		modelBuzzLeftHand.render(modelMatrixBuzzLeftHand);
+
+		// Renderizar brazo derecho
+		glm::mat4 modelMatrixBuzzRightArm = glm::mat4(modelMatrixBuzzTorso);
+		modelBuzzRightArm.render(modelMatrixBuzzRightArm);
+
+		// Renderizar antebrazo derecho
+		glm::mat4 modelMatrixBuzzRightForearm = glm::mat4(modelMatrixBuzzRightArm);
+		modelBuzzRightForearm.render(modelMatrixBuzzRightForearm);
+
+		// Renderizar mano derecha
+		glm::mat4 modelMatrixBuzzRightHand = glm::mat4(modelMatrixBuzzRightForearm);
+		modelBuzzRightHand.render(modelMatrixBuzzRightHand);
+
+		// Renderizar pierna izquierda
+		glm::mat4 modelMatrixBuzzLeftThigh = glm::mat4(modelMatrixBuzzTorso);
+		modelBuzzLeftThigh.render(modelMatrixBuzzLeftThigh);
+
+		// Renderizar pantorrilla izquierda
+		glm::mat4 modelMatrixBuzzLeftCalf = glm::mat4(modelMatrixBuzzLeftThigh);
+		modelBuzzleftCalf.render(modelMatrixBuzzLeftCalf);
+
+		// Renderizar pie izquierdo
+		glm::mat4 modelMatrixBuzzLeftFoot = glm::mat4(modelMatrixBuzzLeftCalf);
+		modelBuzzleftFoot.render(modelMatrixBuzzLeftFoot);
+
+		// Renderizar pierna derecha
+		glm::mat4 modelMatrixBuzzRightThigh = glm::mat4(modelMatrixBuzzTorso);
+		modelBuzzRightThigh.render(modelMatrixBuzzRightThigh);
+
+		// Renderizar pantorrilla derecha
+		glm::mat4 modelMatrixBuzzRightCalf = glm::mat4(modelMatrixBuzzRightThigh);
+		modelBuzzRightCalf.render(modelMatrixBuzzRightCalf);
+
+		// Renderizar pie derecho
+		glm::mat4 modelMatrixBuzzRightFoot = glm::mat4(modelMatrixBuzzRightCalf);
+		modelBuzzRightFoot.render(modelMatrixBuzzRightFoot);
+
+		// Renderizar alas izquierda
+		glm::mat4 modelMatrixBuzzLeftWing1 = glm::mat4(modelMatrixBuzzTorso);
+		modelBuzzLeftWing1.render(modelMatrixBuzzLeftWing1);
+
+		glm::mat4 modelMatrixBuzzLeftWing2 = glm::mat4(modelMatrixBuzzLeftWing1);
+		modelBuzzLeftWing2.render(modelMatrixBuzzLeftWing2);
+
+		// Renderizar alas derecha
+		glm::mat4 modelMatrixBuzzRightWing1 = glm::mat4(modelMatrixBuzzTorso);
+		modelBuzzRightWing1.render(modelMatrixBuzzRightWing1);
+
+		glm::mat4 modelMatrixBuzzRightWing2 = glm::mat4(modelMatrixBuzzRightWing1);
+		modelBuzzRightWing2.render(modelMatrixBuzzRightWing2);
+
+		// Rehabilitar el cull faces después de renderizar
+		glEnable(GL_CULL_FACE);
+
 		/*******************************************
 		 * Skybox
 		 *******************************************/
@@ -1145,11 +1297,12 @@ void applicationLoop() {
 				recorridoTotal = 30.0;
 			}
 
-			std::cout << parteRecorrido << ":" << recorridoTotal << ":" << stateLambo << "\n";
+			//std::cout << parteRecorrido << ":" << recorridoTotal << ":" << stateLambo << "\n";
 			stateLambo = 1;		
 			break;
 		
 		// En este caso el coche se va a mover la cantidad acordada
+		// acorde la seccion de la pista en la que se encuentre
 		case 1:
 			modelMatrixLambo = glm::translate(modelMatrixLambo, glm::vec3(0, 0, avance2));
 			conteoDelRecorrido += avance2;
@@ -1176,7 +1329,7 @@ void applicationLoop() {
 				}
 			}
 
-			std::cout << "Moviendose:" << conteoDelRecorrido;
+			//std::cout << "Moviendose:" << conteoDelRecorrido;
 			break;
 		
 		// El lambo rota -90 grados
