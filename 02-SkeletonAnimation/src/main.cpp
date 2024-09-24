@@ -91,7 +91,11 @@ Model modelBuzzLeftForeArm;
 Model modelBuzzLeftHand;
 
 // Modelos animados
-Model modelKakashi;
+Model modelKakashiDescanso;
+Model modelKakashiCorriendo;
+
+// Variable para controlar que animacion de kakashi
+bool kakashiIsRunning = false;
 
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint skyboxTextureID;
@@ -104,12 +108,19 @@ GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
 GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
 GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
 
-std::string fileNames[6] = { "../Textures/mp_bloodvalley/blood-valley_ft.tga",
+std::string fileNames[6] = {/*  "../Textures/mp_bloodvalley/blood-valley_ft.tga",
 		"../Textures/mp_bloodvalley/blood-valley_bk.tga",
 		"../Textures/mp_bloodvalley/blood-valley_up.tga",
 		"../Textures/mp_bloodvalley/blood-valley_dn.tga",
 		"../Textures/mp_bloodvalley/blood-valley_rt.tga",
-		"../Textures/mp_bloodvalley/blood-valley_lf.tga" };
+		"../Textures/mp_bloodvalley/blood-valley_lf.tga"  */
+		"../Textures/skybox/skyrender0001.tga",
+		"../Textures/skybox/skyrender0004.tga",
+		"../Textures/skybox/skyrender0003.tga",
+		"../Textures/skybox/skyrender0006.tga",
+		"../Textures/skybox/skyrender0005.tga",
+		"../Textures/skybox/skyrender0002.tga"
+		};
 
 bool exitApp = false;
 int lastMousePosX, offsetX = 0;
@@ -123,8 +134,9 @@ glm::mat4 modelMatrixLambo = glm::mat4(1.0);
 glm::mat4 modelMatrixAircraft = glm::mat4(1.0);
 glm::mat4 modelMatrixDart = glm::mat4(1.0f);
 glm::mat4 modelMatrixBuzz = glm::mat4(1.0f);
-glm::mat4 modelMatrixKakashi = glm::mat4(1.0f);
 
+// Model matrix para kakashi
+glm::mat4 modelMatrixKakashi = glm::mat4(1.0f);
 
 float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRightArm = 0.0, rotDartRightHand = 0.0, rotDartLeftLeg = 0.0, rotDartRightLeg = 0.0;
 float rotBuzzHead = 0.0, rotBuzzLeftarm = 0.0, rotBuzzLeftForeArm = 0.0, rotBuzzLeftHand = 0.0;
@@ -338,8 +350,11 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	modelBuzzLeftHand.setShader(&shaderMulLighting);
 
 	// Kakashi animado
-	modelKakashi.loadModel("../models/kakashi/KakashiAnimado3.fbx");
-	modelKakashi.setShader(&shaderMulLighting);
+	modelKakashiDescanso.loadModel("../models/kakashi/KakashiAnimado3.fbx");
+	modelKakashiDescanso.setShader(&shaderMulLighting);
+
+	modelKakashiCorriendo.loadModel("../models/kakashi/KakashiRigIK0.fbx");
+	modelKakashiCorriendo.setShader(&shaderMulLighting);
 
 	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
 	
@@ -552,6 +567,9 @@ void destroy() {
 	modelBuzzLeftForeArm.destroy();
 	modelBuzzLeftHand.destroy();
 	modelBuzzTorso.destroy();
+	
+	modelKakashiDescanso.destroy();
+	modelKakashiCorriendo.destroy();
 
 	// Textures Delete
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -607,6 +625,7 @@ void mouseButtonCallback(GLFWwindow *window, int button, int state, int mod) {
 	}
 }
 
+// definicion de los controles
 bool processInput(bool continueApplication) {
 	if (exitApp || glfwWindowShouldClose(window) != 0) {
 		return false;
@@ -757,6 +776,14 @@ bool processInput(bool continueApplication) {
 	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 		modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(0.0, 0.0, -0.02));
 
+	// Pulsasion de la flecha hacia arriba para mover a kakashi
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		kakashiIsRunning = true;
+	} else if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_RELEASE) {
+		kakashiIsRunning = false;
+	}
+
+
 	glfwPollEvents();
 	return continueApplication;
 }
@@ -785,6 +812,9 @@ void applicationLoop() {
 	modelMatrixDart = glm::translate(modelMatrixDart, glm::vec3(3.0, 0.0, 20.0));
 
 	modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(15.0, 0.0, -10.0));
+
+	modelMatrixKakashi = glm::translate(modelMatrixKakashi, glm::vec3(20.0, 0.0, -1.0));
+	modelMatrixKakashi = glm::scale(modelMatrixKakashi, glm::vec3(0.01f));
 
 	// Variables to interpolation key frames
 	fileName = "../animaciones/animation_dart_joints.txt";
@@ -1120,6 +1150,14 @@ void applicationLoop() {
 		modelMatrixLeftHand = glm::rotate(modelMatrixLeftHand, glm::radians(-45.0f), glm::vec3(0, 1, 0));
 		modelMatrixLeftHand = glm::translate(modelMatrixLeftHand, glm::vec3(-0.416066, -0.587046, -0.076258));
 		modelBuzzLeftHand.render(modelMatrixLeftHand);
+
+		glm::mat4 modelMatrixKakashiBody = glm::mat4(modelMatrixKakashi);
+		//modelMatrixKakashiBody = glm::scale(modelMatrixKakashiBody, glm::vec3(0.1f, 0.1f, 0.1f));
+		if(kakashiIsRunning) {
+			modelKakashiCorriendo.render(modelMatrixKakashiBody);
+		} else {
+			modelKakashiDescanso.render(modelMatrixKakashiBody);
+		}
 
 		/*******************************************
 		 * Skybox
