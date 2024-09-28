@@ -21,7 +21,6 @@
 #include "Headers/Cylinder.h"
 #include "Headers/Box.h"
 #include "Headers/FirstPersonCamera.h"
-#include "Headers/Terrain.h"
 
 //GLM include
 #define GLM_FORCE_RADIANS
@@ -33,6 +32,9 @@
 
 // Include loader Model class
 #include "Headers/Model.h"
+
+// Inclusio del Terreno
+#include "Headers/Terrain.h"
 
 #include "Headers/AnimationUtils.h"
 
@@ -50,8 +52,6 @@ Shader shaderSkybox;
 Shader shaderMulLighting;
 
 std::shared_ptr<FirstPersonCamera> camera(new FirstPersonCamera());
-
-Terrain terrain = Terrain(-1, -1, 500, 50, "../Textures/heightmap.png");
 
 Sphere skyboxSphere(20, 20);
 Box boxCesped;
@@ -101,6 +101,19 @@ Model cowboyModelAnimate;
 Model guardianModelAnimate;
 // Cybog
 Model cyborgModelAnimate;
+//Terrain model instance
+Terrain terrain(-1, -1, 200, 32, "../Textures/heightmap_exercise2.png");
+
+// Modelos animados
+Model modelKakashiDescanso;
+Model modelKakashiCorriendo;
+
+// Variable para controlar que animacion de kakashi
+glm::vec3 kakashiPosition = glm::vec3(0.0f);
+float rotacionKakashi = 0.0f;
+bool kakashiIsRunning = false;
+float velocidadKakashi = 5.0f;
+float velocidadRotacionKakashi = 0.1f;
 
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint skyboxTextureID;
@@ -136,6 +149,9 @@ glm::mat4 modelMatrixMayow = glm::mat4(1.0f);
 glm::mat4 modelMatrixCowboy = glm::mat4(1.0f);
 glm::mat4 modelMatrixGuardian = glm::mat4(1.0f);
 glm::mat4 modelMatrixCyborg = glm::mat4(1.0f);
+
+// Model matrix para kakashi
+glm::mat4 modelMatrixKakashi = glm::mat4(1.0f);
 
 int animationMayowIndex = 1;
 float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRightArm = 0.0, rotDartRightHand = 0.0, rotDartLeftLeg = 0.0, rotDartRightLeg = 0.0;
@@ -239,7 +255,8 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetCursorPosCallback(window, mouseCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+	//glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// Init glew
 	glewExperimental = GL_TRUE;
@@ -259,9 +276,6 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	shader.initialize("../Shaders/colorShader.vs", "../Shaders/colorShader.fs");
 	shaderSkybox.initialize("../Shaders/skyBox.vs", "../Shaders/skyBox.fs");
 	shaderMulLighting.initialize("../Shaders/iluminacion_textura_animation.vs", "../Shaders/multipleLights.fs");
-
-	terrain.init();
-	terrain.setShader(&shaderMulLighting);
 
 	// Inicializacion de los objetos.
 	skyboxSphere.init();
@@ -367,6 +381,16 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	// Cyborg
 	cyborgModelAnimate.loadModel("../models/cyborg/cyborg.fbx");
 	cyborgModelAnimate.setShader(&shaderMulLighting);
+
+	// Kakashi animado
+	modelKakashiDescanso.loadModel("../models/kakashi/KakashiAnimado3.fbx");
+	modelKakashiDescanso.setShader(&shaderMulLighting);
+
+	modelKakashiCorriendo.loadModel("../models/kakashi/KakashiRigIK0.fbx");
+	modelKakashiCorriendo.setShader(&shaderMulLighting);
+
+	terrain.init();
+	terrain.setShader(&shaderMulLighting);
 
 	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
 	
@@ -541,8 +565,6 @@ void destroy() {
 	shaderMulLighting.destroy();
 	shaderSkybox.destroy();
 
-	terrain.destroy();
-
 	// Basic objects Delete
 	skyboxSphere.destroy();
 	boxCesped.destroy();
@@ -585,6 +607,11 @@ void destroy() {
 	cowboyModelAnimate.destroy();
 	guardianModelAnimate.destroy();
 	cyborgModelAnimate.destroy();
+	modelKakashiDescanso.destroy();
+	modelKakashiCorriendo.destroy();
+
+	//terrain object delete
+	terrain.destroy();
 
 	// Textures Delete
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -617,10 +644,19 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 void mouseCallback(GLFWwindow *window, double xpos, double ypos) {
-	offsetX = xpos - lastMousePosX;
-	offsetY = ypos - lastMousePosY;
-	lastMousePosX = xpos;
-	lastMousePosY = ypos;
+	static bool firstMouse = true;
+    if (firstMouse) {
+        lastMousePosX = xpos;
+        lastMousePosY = ypos;
+        firstMouse = false;
+    }
+
+    offsetX = xpos - lastMousePosX;
+    offsetY = ypos - lastMousePosY;  // Invertir para que suba con movimiento hacia arriba
+    lastMousePosX = xpos;
+    lastMousePosY = ypos;
+
+    camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
 }
 
 void mouseButtonCallback(GLFWwindow *window, int button, int state, int mod) {
@@ -642,21 +678,47 @@ void mouseButtonCallback(GLFWwindow *window, int button, int state, int mod) {
 
 bool processInput(bool continueApplication) {
 	if (exitApp || glfwWindowShouldClose(window) != 0) {
-		return false;
+        return false;
+    }
+
+    // Factor de velocidad para acelerar el movimiento de la cámara
+    float speedMultiplier = 2.0f; // Cambia este valor para aumentar la velocidad
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera->moveFrontCamera(true, deltaTime * speedMultiplier);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera->moveFrontCamera(false, deltaTime * speedMultiplier);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera->moveRightCamera(false, deltaTime * speedMultiplier);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera->moveRightCamera(true, deltaTime * speedMultiplier);
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
+
+    offsetX = 0;
+    offsetY = 0;
+
+	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		kakashiIsRunning = true;
+
+		kakashiPosition.x += sin(rotacionKakashi) * velocidadKakashi;
+    kakashiPosition.z += cos(rotacionKakashi) * velocidadKakashi;
+
+	} else if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_RELEASE) {
+		kakashiIsRunning = false;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera->moveFrontCamera(true, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera->moveFrontCamera(false, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera->moveRightCamera(false, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera->moveRightCamera(true, deltaTime);
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-		camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
-	offsetX = 0;
-	offsetY = 0;
+	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+		// Rotamos a kakashi hacia izquierda
+		rotacionKakashi += velocidadRotacionKakashi; 
+	} 
+
+	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+		// rotamos a kakashi hacia la derecha
+		rotacionKakashi -= velocidadRotacionKakashi; 
+	}
+
 
 	// Seleccionar modelo
 	if (enableCountSelected && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS){
@@ -845,6 +907,7 @@ void applicationLoop() {
 	modelMatrixGuardian = glm::rotate(modelMatrixGuardian, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
 
 	modelMatrixCyborg = glm::translate(modelMatrixCyborg, glm::vec3(5.0f, 0.05, 0.0f));
+	modelMatrixKakashi = glm::scale(modelMatrixKakashi, glm::vec3(0.01f));
 
 	// Variables to interpolation key frames
 	fileName = "../animaciones/animation_dart_joints.txt";
@@ -915,35 +978,44 @@ void applicationLoop() {
 		/*******************************************
 		 * Cesped
 		 *******************************************/
-		// glm::mat4 modelCesped = glm::mat4(1.0);
-		// modelCesped = glm::translate(modelCesped, glm::vec3(0.0, 0.0, 0.0));
-		// modelCesped = glm::scale(modelCesped, glm::vec3(200.0, 0.001, 200.0));
-		// // Se activa la textura del agua
-		// glActiveTexture(GL_TEXTURE0);
-		// glBindTexture(GL_TEXTURE_2D, textureCespedID);
-		// shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(200, 200)));
-		// boxCesped.render(modelCesped);
-		// shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(0, 0)));
-		// glBindTexture(GL_TEXTURE_2D, 0);
-
-		// agregamos el mapa de alturas
+		/*glm::mat4 modelCesped = glm::mat4(1.0);
+		modelCesped = glm::translate(modelCesped, glm::vec3(0.0, 0.0, 0.0));
+		modelCesped = glm::scale(modelCesped, glm::vec3(200.0, 0.001, 200.0));
+		// Se activa la textura del agua
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textureCespedID);
+		shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(200, 200)));
+		boxCesped.render(modelCesped);
+		shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(0, 0)));
+		glBindTexture(GL_TEXTURE_2D, 0);*/
+		
+		/*******************************************
+		Terrain Cespep
+		*******************************************/
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textureCespedID);
+		terrain.setPosition(glm::vec3(100.0f, 0.0f, 100.0f));
+		shaderMulLighting.setVectorFloat2("scaleUV",glm::value_ptr(glm::vec2(100.0f)));
 		terrain.render();
+		shaderMulLighting.setVectorFloat2("scaleUV",glm::value_ptr(glm::vec2(1.0f)));
 		glBindTexture(GL_TEXTURE_2D, 0);
+
 
 		/*******************************************
 		 * Custom objects obj
 		 *******************************************/
 		//Rock render
+		matrixModelRock[3][1]=terrain.getHeightTerrain(matrixModelRock[3][0], matrixModelRock[3][2]);
 		modelRock.render(matrixModelRock);
 		// Forze to enable the unit texture to 0 always ----------------- IMPORTANT
 		glActiveTexture(GL_TEXTURE0);
 
 		// Render for the aircraft model
+		modelMatrixAircraft[3][1]=terrain.getHeightTerrain(modelMatrixAircraft[3][0], modelMatrixAircraft[3][2]) + 2.0;
 		modelAircraft.render(modelMatrixAircraft);
 
 		// Render for the eclipse car
+		modelMatrixEclipse[3][1]=terrain.getHeightTerrain(modelMatrixEclipse[3][0], modelMatrixEclipse[3][2]);
 		glm::mat4 modelMatrixEclipseChasis = glm::mat4(modelMatrixEclipse);
 		modelMatrixEclipseChasis = glm::scale(modelMatrixEclipse, glm::vec3(0.5, 0.5, 0.5));
 		modelEclipseChasis.render(modelMatrixEclipseChasis);
@@ -979,6 +1051,7 @@ void applicationLoop() {
 		// Lambo car
 		glDisable(GL_CULL_FACE);
 		glm::mat4 modelMatrixLamboChasis = glm::mat4(modelMatrixLambo);
+		modelMatrixLamboChasis[3][1]=terrain.getHeightTerrain(modelMatrixLamboChasis[3][0], modelMatrixLamboChasis[3][2]);
 		modelMatrixLamboChasis = glm::scale(modelMatrixLamboChasis, glm::vec3(1.3, 1.3, 1.3));
 		modelLambo.render(modelMatrixLamboChasis);
 		glActiveTexture(GL_TEXTURE0);
@@ -1077,27 +1150,58 @@ void applicationLoop() {
 		modelMatrixLeftHand = glm::translate(modelMatrixLeftHand, glm::vec3(-0.416066, -0.587046, -0.076258));
 		modelBuzzLeftHand.render(modelMatrixLeftHand);
 
+
+
+
 		/*****************************************
 		 * Objetos animados por huesos
 		 * **************************************/
+		glm::vec3 ejey = glm::normalize(terrain.getNormalTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]));
+		glm::vec3 ejex = glm::vec3(modelMatrixMayow[0]);
+		glm::vec3 ejez = glm::normalize(glm::cross(ejex,ejey));
+		ejex = glm::normalize(glm::cross(ejey,ejez));
+
+		modelMatrixMayow[0]=glm::vec4(ejex,0.0);
+		modelMatrixMayow[1]=glm::vec4(ejey,0.0);
+		modelMatrixMayow[2]=glm::vec4(ejez,0.0);
+		modelMatrixMayow[3][1]=terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
 		glm::mat4 modelMatrixMayowBody = glm::mat4(modelMatrixMayow);
 		modelMatrixMayowBody = glm::scale(modelMatrixMayowBody, glm::vec3(0.021f));
 		mayowModelAnimate.setAnimationIndex(animationMayowIndex);
 		mayowModelAnimate.render(modelMatrixMayowBody);
 		animationMayowIndex = 1;
 
+		modelMatrixCowboy[3][1]=terrain.getHeightTerrain(modelMatrixCowboy[3][0], modelMatrixCowboy[3][2]);
 		glm::mat4 modelMatrixCowboyBody = glm::mat4(modelMatrixCowboy);
 		modelMatrixCowboyBody = glm::scale(modelMatrixCowboyBody, glm::vec3(0.0021f));
 		cowboyModelAnimate.render(modelMatrixCowboyBody);
 
+		modelMatrixCowboy[3][1]=terrain.getHeightTerrain(modelMatrixCowboy[3][0], modelMatrixCowboy[3][2]);
 		glm::mat4 modelMatrixGuardianBody = glm::mat4(modelMatrixGuardian);
 		modelMatrixGuardianBody = glm::scale(modelMatrixGuardianBody, glm::vec3(0.04f));
 		guardianModelAnimate.render(modelMatrixGuardianBody);
 
+		modelMatrixCyborg[3][1]=terrain.getHeightTerrain(modelMatrixCyborg[3][0], modelMatrixCyborg[3][2]);
 		glm::mat4 modelMatrixCyborgBody = glm::mat4(modelMatrixCyborg);
 		modelMatrixCyborgBody = glm::scale(modelMatrixCyborgBody, glm::vec3(0.009f));
 		cyborgModelAnimate.setAnimationIndex(1);
 		cyborgModelAnimate.render(modelMatrixCyborgBody);
+
+
+		glm::mat4 modelMatrixKakashiBody = glm::mat4(modelMatrixKakashi);
+		
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, kakashiPosition);
+		modelMatrixKakashiBody = glm::rotate(modelMatrixKakashiBody, rotacionKakashi, glm::vec3(0.0f, 1.0f, 0.0f));
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, -kakashiPosition);
+		
+		// Para mover al personaje
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, kakashiPosition);
+
+		if(kakashiIsRunning) {
+			modelKakashiCorriendo.render(modelMatrixKakashiBody);
+		} else {
+			modelKakashiDescanso.render(modelMatrixKakashiBody);
+		}
 
 		/*******************************************
 		 * Skybox
