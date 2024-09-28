@@ -95,7 +95,11 @@ Model modelKakashiDescanso;
 Model modelKakashiCorriendo;
 
 // Variable para controlar que animacion de kakashi
+glm::vec3 kakashiPosition = glm::vec3(0.0f);
+float rotacionKakashi = 0.0f;
 bool kakashiIsRunning = false;
+float velocidadKakashi = 5.0f;
+float velocidadRotacionKakashi = 0.1f;
 
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint skyboxTextureID;
@@ -631,18 +635,47 @@ bool processInput(bool continueApplication) {
 		return false;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		camera->moveFrontCamera(true, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	}
+	
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
 		camera->moveFrontCamera(false, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
 		camera->moveRightCamera(false, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
 		camera->moveRightCamera(true, deltaTime);
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+	}
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {		
 		camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
+	}
+
 	offsetX = 0;
 	offsetY = 0;
+
+
+	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		kakashiIsRunning = true;
+
+		kakashiPosition.x += sin(rotacionKakashi) * velocidadKakashi;
+    kakashiPosition.z += cos(rotacionKakashi) * velocidadKakashi;
+
+	} else if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_RELEASE) {
+		kakashiIsRunning = false;
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+		// Rotamos a kakashi hacia izquierda
+		rotacionKakashi += velocidadRotacionKakashi; 
+	} 
+
+	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+		// rotamos a kakashi hacia la derecha
+		rotacionKakashi -= velocidadRotacionKakashi; 
+	}
+
 
 	// Seleccionar modelo
 	if (enableCountSelected && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS){
@@ -776,14 +809,6 @@ bool processInput(bool continueApplication) {
 	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 		modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(0.0, 0.0, -0.02));
 
-	// Pulsasion de la flecha hacia arriba para mover a kakashi
-	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-		kakashiIsRunning = true;
-	} else if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_RELEASE) {
-		kakashiIsRunning = false;
-	}
-
-
 	glfwPollEvents();
 	return continueApplication;
 }
@@ -813,7 +838,6 @@ void applicationLoop() {
 
 	modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(15.0, 0.0, -10.0));
 
-	modelMatrixKakashi = glm::translate(modelMatrixKakashi, glm::vec3(20.0, 0.0, -1.0));
 	modelMatrixKakashi = glm::scale(modelMatrixKakashi, glm::vec3(0.01f));
 
 	// Variables to interpolation key frames
@@ -1152,7 +1176,14 @@ void applicationLoop() {
 		modelBuzzLeftHand.render(modelMatrixLeftHand);
 
 		glm::mat4 modelMatrixKakashiBody = glm::mat4(modelMatrixKakashi);
-		//modelMatrixKakashiBody = glm::scale(modelMatrixKakashiBody, glm::vec3(0.1f, 0.1f, 0.1f));
+		
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, kakashiPosition);
+		modelMatrixKakashiBody = glm::rotate(modelMatrixKakashiBody, rotacionKakashi, glm::vec3(0.0f, 1.0f, 0.0f));
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, -kakashiPosition);
+		
+		// Para mover al personaje
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, kakashiPosition);
+
 		if(kakashiIsRunning) {
 			modelKakashiCorriendo.render(modelMatrixKakashiBody);
 		} else {
