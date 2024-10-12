@@ -220,6 +220,11 @@ double currTime, lastTime;
 const float avance = 0.1;
 const float giroEclipse = 0.5f;
 
+bool isJump = false;
+float GRAVITY = 2.0;
+double tmv = 0; // variable de tiempo para tiro parabolico
+double startTimeJump = 0;
+
 // Se definen todos las funciones.
 void reshapeCallback(GLFWwindow *Window, int widthRes, int heightRes);
 void keyCallback(GLFWwindow *window, int key, int scancode, int action,
@@ -778,6 +783,16 @@ bool processInput(bool continueApplication) {
 		return false;
 	}
 
+	if(glfwJoystickPresent(GLFW_JOYSTICK_1) == GL_TRUE) {
+		//std::cout << "Joystick presente" << std::endl;
+
+		int axesCount, buttonCount;
+		const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axesCount);
+
+		std::cout << "numero de ejes disponible " << axesCount << std::endl;
+		std::cout << axes[0] << " - " << axes[1] << std::endl;
+	}
+
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 		camera->mouseMoveCamera(offsetX, 0.0, deltaTime);
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
@@ -935,6 +950,19 @@ bool processInput(bool continueApplication) {
 		animationMayowIndex = 0;
 	}
 
+
+
+	bool keySpaceStatus = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+
+	if(glfwJoystickIsGamepad(GLFW_JOYSTICK_1))
+
+	// No hay ningun salto previo y se pulso la tecla espacio
+	if(!isJump && keySpaceStatus) {
+		isJump = true;
+		startTimeJump = currTime;
+		tmv = 0;
+	}
+
 	glfwPollEvents();
 	return continueApplication;
 }
@@ -989,7 +1017,7 @@ void applicationLoop() {
 
 	while (psi) {
 		currTime = TimeManager::Instance().GetTime();
-		if(currTime - lastTime < 0.016666667){
+		if(currTime - lastTime < 0.1){
 			glfwPollEvents();
 			continue;
 		}
@@ -1347,7 +1375,16 @@ void applicationLoop() {
 		modelMatrixMayow[0] = glm::vec4(ejex, 0.0);
 		modelMatrixMayow[1] = glm::vec4(ejey, 0.0);
 		modelMatrixMayow[2] = glm::vec4(ejez, 0.0);
-		modelMatrixMayow[3][1] = terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
+
+		//modelMatrixMayow[3][1] = terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
+		modelMatrixMayow[3][1] = -GRAVITY * tmv * tmv + 3.0 * tmv + terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
+		tmv = currTime - startTimeJump;
+
+		if(modelMatrixMayow[3][1] < terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2])) {
+			modelMatrixMayow[3][1] = terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
+			isJump = false;
+		}
+
 		glm::mat4 modelMatrixMayowBody = glm::mat4(modelMatrixMayow);
 		modelMatrixMayowBody = glm::scale(modelMatrixMayowBody, glm::vec3(0.021f));
 		mayowModelAnimate.setAnimationIndex(animationMayowIndex);
