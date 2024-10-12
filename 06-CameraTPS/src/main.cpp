@@ -111,6 +111,12 @@ Model cowboyModelAnimate;
 Model guardianModelAnimate;
 // Cybog
 Model cyborgModelAnimate;
+
+// Kakashi
+Model modelKakashiDescanso;
+Model modelKakashiCorriendo;
+Model modelKakashibreakdance;
+
 // Terrain model instance
 Terrain terrain(-1, -1, 200, 8, "../Textures/heightmap.png");
 
@@ -149,12 +155,20 @@ glm::mat4 modelMatrixMayow = glm::mat4(1.0f);
 glm::mat4 modelMatrixCowboy = glm::mat4(1.0f);
 glm::mat4 modelMatrixGuardian = glm::mat4(1.0f);
 glm::mat4 modelMatrixCyborg = glm::mat4(1.0f);
+glm::mat4 modelMatrixKakashi = glm::mat4(1.0f);
 
 int animationMayowIndex = 1;
 float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRightArm = 0.0, rotDartRightHand = 0.0, rotDartLeftLeg = 0.0, rotDartRightLeg = 0.0;
 float rotBuzzHead = 0.0, rotBuzzLeftarm = 0.0, rotBuzzLeftForeArm = 0.0, rotBuzzLeftHand = 0.0;
-int modelSelected = 0;
+
+uint8_t modelSelected = 0;
 bool enableCountSelected = true;
+enum Personaje {
+	MAYOW = 0,
+	KAKASHI,
+};
+uint8_t numeroPersonajesIntercambiar = 2;
+uint8_t kakashiState = 0;
 
 // Variables to animations keyframes
 bool saveFrame = false, availableSave = true;
@@ -352,39 +366,6 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	modelLamboRearRightWheel.loadModel("../models/Lamborginhi_Aventador_OBJ/Lamborghini_Aventador_rear_right_wheel.obj");
 	modelLamboRearRightWheel.setShader(&shaderMulLighting);
 
-	// Dart Lego
-	modelDartLegoBody.loadModel("../models/LegoDart/LeoDart_body.obj");
-	modelDartLegoBody.setShader(&shaderMulLighting);
-	modelDartLegoMask.loadModel("../models/LegoDart/LeoDart_mask.obj");
-	modelDartLegoMask.setShader(&shaderMulLighting);
-	modelDartLegoHead.loadModel("../models/LegoDart/LeoDart_head.obj");
-	modelDartLegoHead.setShader(&shaderMulLighting);
-	modelDartLegoLeftArm.loadModel("../models/LegoDart/LeoDart_left_arm.obj");
-	modelDartLegoLeftArm.setShader(&shaderMulLighting);
-	modelDartLegoRightArm.loadModel("../models/LegoDart/LeoDart_right_arm.obj");
-	modelDartLegoRightArm.setShader(&shaderMulLighting);
-	modelDartLegoLeftHand.loadModel("../models/LegoDart/LeoDart_left_hand.obj");
-	modelDartLegoLeftHand.setShader(&shaderMulLighting);
-	modelDartLegoRightHand.loadModel("../models/LegoDart/LeoDart_right_hand.obj");
-	modelDartLegoRightHand.setShader(&shaderMulLighting);
-	modelDartLegoLeftLeg.loadModel("../models/LegoDart/LeoDart_left_leg.obj");
-	modelDartLegoLeftLeg.setShader(&shaderMulLighting);
-	modelDartLegoRightLeg.loadModel("../models/LegoDart/LeoDart_right_leg.obj");
-	modelDartLegoRightLeg.setShader(&shaderMulLighting);
-
-	
-	// Buzz
-	modelBuzzTorso.loadModel("../models/buzz/buzzlightyTorso.obj");
-	modelBuzzTorso.setShader(&shaderMulLighting);
-	modelBuzzHead.loadModel("../models/buzz/buzzlightyHead.obj");
-	modelBuzzHead.setShader(&shaderMulLighting);
-	modelBuzzLeftArm.loadModel("../models/buzz/buzzlightyLeftArm.obj");
-	modelBuzzLeftArm.setShader(&shaderMulLighting);
-	modelBuzzLeftForeArm.loadModel("../models/buzz/buzzlightyLeftForearm.obj");
-	modelBuzzLeftForeArm.setShader(&shaderMulLighting);
-	modelBuzzLeftHand.loadModel("../models/buzz/buzzlightyLeftHand.obj");
-	modelBuzzLeftHand.setShader(&shaderMulLighting);
-
 	//Lamps models
 	modelLamp1.loadModel("../models/Street-Lamp-Black/objLamp.obj");
 	modelLamp1.setShader(&shaderMulLighting);
@@ -408,6 +389,16 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	// Cyborg
 	cyborgModelAnimate.loadModel("../models/cyborg/cyborg.fbx");
 	cyborgModelAnimate.setShader(&shaderMulLighting);
+
+	// Kakashi
+	modelKakashiDescanso.loadModel("../models/kakashi/KakashiAnimado3.fbx");
+	modelKakashiDescanso.setShader(&shaderMulLighting);
+
+	modelKakashiCorriendo.loadModel("../models/kakashi/KakashiRigIK0.fbx");
+	modelKakashiCorriendo.setShader(&shaderMulLighting);
+
+	modelKakashibreakdance.loadModel("../models/kakashi/KakashiBailando2.fbx");
+	modelKakashibreakdance.setShader(&shaderMulLighting);
 
 	// Terreno
 	terrain.init();
@@ -709,6 +700,9 @@ void destroy() {
 	cowboyModelAnimate.destroy();
 	guardianModelAnimate.destroy();
 	cyborgModelAnimate.destroy();
+	modelKakashiDescanso.destroy();
+	modelKakashiCorriendo.destroy();
+	modelKakashibreakdance.destroy();
 
 	// Terrains objects Delete
 	terrain.destroy();
@@ -804,154 +798,58 @@ bool processInput(bool continueApplication) {
 	// Seleccionar modelo
 	if (enableCountSelected && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS){
 		enableCountSelected = false;
-		modelSelected++;
-		if(modelSelected > 4)
-			modelSelected = 0;
-		if(modelSelected == 1)
-			fileName = "../animaciones/animation_dart_joints.txt";
-		if (modelSelected == 2)
-			fileName = "../animaciones/animation_dart.txt";
-		if(modelSelected == 3)
-			fileName = "../animaciones/animation_buzz_joints.txt";
-		if (modelSelected == 4)
-			fileName = "../animaciones/animation_buzz.txt";
-		std::cout << "modelSelected:" << modelSelected << std::endl;
-	}
-	else if(glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE)
+		modelSelected = ++modelSelected % numeroPersonajesIntercambiar; 
+	} else if(glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
 		enableCountSelected = true;
-
-	// Guardar key frames
-	if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-			&& glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
-		record = true;
-		if(myfile.is_open())
-			myfile.close();
-		myfile.open(fileName);
 	}
-	if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE
-			&& glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
-		record = false;
-		myfile.close();
-		if(modelSelected == 1)
-			keyFramesDartJoints = getKeyRotFrames(fileName);
-		if (modelSelected == 2)
-			keyFramesDart = getKeyFrames(fileName);
-		if(modelSelected == 3)
-			keyFramesBuzzJoints = getKeyRotFrames(fileName);
-		if (modelSelected == 4)
-			keyFramesBuzz = getKeyFrames(fileName);
-	}
-	if(availableSave && glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS){
-		saveFrame = true;
-		availableSave = false;
-	}if(glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_RELEASE)
-		availableSave = true;
-
-	// Dart Lego model movements
-	if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-		rotDartHead += 0.02;
-	else if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-		rotDartHead -= 0.02;
-	if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-		rotDartLeftArm += 0.02;
-	else if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-		rotDartLeftArm -= 0.02;
-	if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
-		rotDartRightArm += 0.02;
-	else if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
-		rotDartRightArm -= 0.02;
-	if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
-		rotDartLeftHand += 0.02;
-	else if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
-		rotDartLeftHand -= 0.02;
-	if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS)
-		rotDartRightHand += 0.02;
-	else if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS)
-		rotDartRightHand -= 0.02;
-	if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS)
-		rotDartLeftLeg += 0.02;
-	else if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS)
-		rotDartLeftLeg -= 0.02;
-	if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS)
-		rotDartRightLeg += 0.02;
-	else if (modelSelected == 1 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_7) == GLFW_PRESS)
-		rotDartRightLeg -= 0.02;
-	if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-		modelMatrixDart = glm::rotate(modelMatrixDart, 0.02f, glm::vec3(0, 1, 0));
-	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-		modelMatrixDart = glm::rotate(modelMatrixDart, -0.02f, glm::vec3(0, 1, 0));
-	if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-		modelMatrixDart = glm::translate(modelMatrixDart, glm::vec3(-0.02, 0.0, 0.0));
-	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-		modelMatrixDart = glm::translate(modelMatrixDart, glm::vec3(0.02, 0.0, 0.0));
 	
-	// Movimientos de buzz
-	if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-		rotBuzzHead += 0.02;
-	else if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-		rotBuzzHead -= 0.02;
-	if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-		rotBuzzLeftarm += 0.02;
-	else if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-		rotBuzzLeftarm -= 0.02;
-	if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
-		rotBuzzLeftForeArm += 0.02;
-	else if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
-		rotBuzzLeftForeArm -= 0.02;
-	if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE &&
-			glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
-		rotBuzzLeftHand += 0.02;
-	else if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS &&
-			glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
-		rotBuzzLeftHand -= 0.02;
-	if (modelSelected == 4 && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-		modelMatrixBuzz = glm::rotate(modelMatrixBuzz, 0.02f, glm::vec3(0, 1, 0));
-	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-		modelMatrixBuzz = glm::rotate(modelMatrixBuzz, -0.02f, glm::vec3(0, 1, 0));
-	if (modelSelected == 4 && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-		modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(0.0, 0.0, 0.02));
-	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-		modelMatrixBuzz = glm::translate(modelMatrixBuzz, glm::vec3(0.0, 0.0, -0.02));
-
-	// Controles de mayow
-	if (modelSelected == 0 && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
+	// Controles para mover izquierda y a la derecha
+	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
 		angleTarget += 0.02f;
-		modelMatrixMayow = glm::rotate(modelMatrixMayow, 0.02f, glm::vec3(0, 1, 0));
-		animationMayowIndex = 0;
-	} else if (modelSelected == 0 && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
+
+		if(modelSelected == Personaje::MAYOW) {
+			modelMatrixMayow = glm::rotate(modelMatrixMayow, 0.02f, glm::vec3(0, 1, 0));
+			animationMayowIndex = 0;
+		} else if(modelSelected == Personaje::KAKASHI) {
+			modelMatrixKakashi = glm::rotate(modelMatrixKakashi, 0.02f, glm::vec3(0, 1, 0));
+		}
+	} else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
 		angleTarget -= 0.02f;
-		modelMatrixMayow = glm::rotate(modelMatrixMayow, -0.02f, glm::vec3(0, 1, 0));
-		animationMayowIndex = 0;
-	}
-	if (modelSelected == 0 && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
-		modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0.0, 0.0, 0.02));
-		animationMayowIndex = 0;
-	}
-	else if (modelSelected == 0 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
-		modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0.0, 0.0, -0.02));
-		animationMayowIndex = 0;
+		
+		if(modelSelected == Personaje::MAYOW) {
+			modelMatrixMayow = glm::rotate(modelMatrixMayow, -0.02f, glm::vec3(0, 1, 0));
+			animationMayowIndex = 0;
+		} else if(modelSelected == Personaje::KAKASHI) {
+			modelMatrixKakashi = glm::rotate(modelMatrixKakashi, -0.02f, glm::vec3(0, 1, 0));
+		}
 	}
 
+	// Controles para ir adelante y atras
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		if(modelSelected == Personaje::MAYOW) {
+			modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0.0, 0.0, 0.02));
+			animationMayowIndex = 0;
+		} else if(modelSelected == Personaje::KAKASHI) {
+			kakashiState = 1;
+			modelMatrixKakashi = glm::translate(modelMatrixKakashi, glm::vec3(0.0, 0.0, 5.0));
+		}
+	} else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		if(modelSelected == Personaje::MAYOW) {
+			modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0.0, 0.0, -0.02));
+			animationMayowIndex = 0;
+		}
+	}
+
+	if(modelSelected == Personaje::KAKASHI && (window, GLFW_KEY_UP) == GLFW_RELEASE) {
+		kakashiState = 0;
+	}
+
+	if(modelSelected == Personaje::KAKASHI && glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) {
+		kakashiState = 2;
+	} else if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_RELEASE) {
+		kakashiState = 0;
+	}
+	
 	glfwPollEvents();
 	return continueApplication;
 }
@@ -990,6 +888,7 @@ void applicationLoop() {
 	modelMatrixGuardian = glm::rotate(modelMatrixGuardian, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
 
 	modelMatrixCyborg = glm::translate(modelMatrixCyborg, glm::vec3(5.0f, 0.05, 0.0f));
+	modelMatrixKakashi = glm::scale(modelMatrixKakashi, glm::vec3(0.01f));
 
 	// Variables to interpolation key frames
 	fileName = "../animaciones/animation_dart_joints.txt";
@@ -1026,8 +925,8 @@ void applicationLoop() {
 				(float) screenWidth / (float) screenHeight, 0.01f, 100.0f);
 
 		if(modelSelected == 1) 
-			positionTarget = modelMatrixDart[3];
-		else if(modelSelected == 2 || modelSelected == 0)
+			positionTarget = modelMatrixKakashi[3];
+		else if(modelSelected == 0)
 			positionTarget = modelMatrixMayow[3];
 		
 		camera->setCameraTarget(positionTarget);
@@ -1375,6 +1274,25 @@ void applicationLoop() {
 		cyborgModelAnimate.setAnimationIndex(1);
 		cyborgModelAnimate.render(modelMatrixCyborgBody);
 
+		glm::mat4 modelMatrixKakashiBody = glm::mat4(modelMatrixKakashi);
+		//Ajuste del eje y del objeto
+		modelMatrixKakashiBody[3][1] = terrain.getHeightTerrain(modelMatrixKakashiBody[3][0], modelMatrixKakashiBody[3][2]);
+
+		switch ( kakashiState) {
+			case 0:
+				modelKakashiDescanso.render(modelMatrixKakashiBody);
+				break;
+			case 1:
+				modelKakashiCorriendo.render(modelMatrixKakashiBody);
+				break;
+			case 2:
+				modelKakashibreakdance.render(modelMatrixKakashiBody);
+				break;
+			
+			default:
+				break;
+		}
+
 		/*******************************************
 		 * Skybox
 		 *******************************************/
@@ -1391,111 +1309,6 @@ void applicationLoop() {
 		glCullFace(oldCullFaceMode);
 		glDepthFunc(oldDepthFuncMode);
 
-		
-		// Animaciones por keyframes dart Vader
-		// Para salvar los keyframes
-		if(record && modelSelected == 1){
-			matrixDartJoints.push_back(rotDartHead);
-			matrixDartJoints.push_back(rotDartLeftArm);
-			matrixDartJoints.push_back(rotDartLeftHand);
-			matrixDartJoints.push_back(rotDartRightArm);
-			matrixDartJoints.push_back(rotDartRightHand);
-			matrixDartJoints.push_back(rotDartLeftLeg);
-			matrixDartJoints.push_back(rotDartRightLeg);
-			if(saveFrame){
-				saveFrame = false;
-				appendFrame(myfile, matrixDartJoints);
-			}
-		}
-		else if(keyFramesDartJoints.size() > 0){
-			// Para reproducir el frame
-			interpolationDartJoints = numPasosDartJoints / (float) maxNumPasosDartJoints;
-			numPasosDartJoints++;
-			if(interpolationDartJoints > 1.0){
-				interpolationDartJoints = 0;
-				numPasosDartJoints = 0;
-				indexFrameDartJoints = indexFrameDartJointsNext;
-				indexFrameDartJointsNext++;
-			}
-			if(indexFrameDartJointsNext > keyFramesDartJoints.size() -1)
-				indexFrameDartJointsNext = 0;
-			rotDartHead = interpolate(keyFramesDartJoints, indexFrameDartJoints, indexFrameDartJointsNext, 0, interpolationDartJoints);
-			rotDartLeftArm = interpolate(keyFramesDartJoints, indexFrameDartJoints, indexFrameDartJointsNext, 1, interpolationDartJoints);
-			rotDartLeftHand = interpolate(keyFramesDartJoints, indexFrameDartJoints, indexFrameDartJointsNext, 2, interpolationDartJoints);
-			rotDartRightArm = interpolate(keyFramesDartJoints, indexFrameDartJoints, indexFrameDartJointsNext, 3, interpolationDartJoints);
-			rotDartRightHand = interpolate(keyFramesDartJoints, indexFrameDartJoints, indexFrameDartJointsNext, 4, interpolationDartJoints);
-			rotDartLeftLeg = interpolate(keyFramesDartJoints, indexFrameDartJoints, indexFrameDartJointsNext, 5, interpolationDartJoints);
-			rotDartRightLeg = interpolate(keyFramesDartJoints, indexFrameDartJoints, indexFrameDartJointsNext, 6, interpolationDartJoints);
-		}
-		if(record && modelSelected == 2){
-			matrixDart.push_back(modelMatrixDart);
-			if(saveFrame){
-				saveFrame = false;
-				appendFrame(myfile, matrixDart);
-			}
-		}
-		else if(keyFramesDart.size() > 0){
-			interpolationDart = numPasosDart / (float) maxNumPasosDart;
-			numPasosDart++;
-			if(interpolationDart > 1.0){
-				numPasosDart = 0;
-				interpolationDart = 0;
-				indexFrameDart = indexFrameDartNext;
-				indexFrameDartNext++;
-			}
-			if(indexFrameDartNext > keyFramesDart.size() - 1)
-				indexFrameDartNext = 0;
-			modelMatrixDart = interpolate(keyFramesDart, indexFrameDart, indexFrameDartNext, 0, interpolationDart);
-		}
-		// Animaciones por keyframes buzz
-		// Para salvar los keyframes
-		if(record && modelSelected == 3){
-			matrixBuzzJoints.push_back(rotBuzzHead);
-			matrixBuzzJoints.push_back(rotBuzzLeftarm);
-			matrixBuzzJoints.push_back(rotBuzzLeftForeArm);
-			matrixBuzzJoints.push_back(rotBuzzLeftHand);
-			if(saveFrame){
-				saveFrame = false;
-				appendFrame(myfile, matrixBuzzJoints);
-			}
-		}
-		else if(keyFramesBuzzJoints.size() > 0){
-			// Para reproducir el frame
-			interpolationBuzzJoints = numPasosBuzzJoints / (float) maxNumPasosBuzzJoints;
-			numPasosBuzzJoints++;
-			if(interpolationBuzzJoints > 1.0){
-				interpolationBuzzJoints = 0;
-				numPasosBuzzJoints = 0;
-				indexFrameBuzzJoints = indexFrameBuzzJointsNext;
-				indexFrameBuzzJointsNext++;
-			}
-			if(indexFrameBuzzJointsNext > keyFramesBuzzJoints.size() -1)
-				indexFrameBuzzJointsNext = 0;
-			rotBuzzHead = interpolate(keyFramesBuzzJoints, indexFrameBuzzJoints, indexFrameBuzzJointsNext, 0, interpolationBuzzJoints);
-			rotBuzzLeftarm = interpolate(keyFramesBuzzJoints, indexFrameBuzzJoints, indexFrameBuzzJointsNext, 1, interpolationBuzzJoints);
-			rotBuzzLeftForeArm = interpolate(keyFramesBuzzJoints, indexFrameBuzzJoints, indexFrameBuzzJointsNext, 2, interpolationBuzzJoints);
-			rotBuzzLeftHand = interpolate(keyFramesBuzzJoints, indexFrameBuzzJoints, indexFrameBuzzJointsNext, 3, interpolationBuzzJoints);
-		}
-		if(record && modelSelected == 4){
-			matrixBuzz.push_back(modelMatrixBuzz);
-			if(saveFrame){
-				saveFrame = false;
-				appendFrame(myfile, matrixBuzz);
-			}
-		}
-		else if(keyFramesBuzz.size() > 0){
-			interpolationBuzz = numPasosBuzz / (float) maxNumPasosBuzz;
-			numPasosBuzz++;
-			if(interpolationBuzz > 1.0){
-				numPasosBuzz = 0;
-				interpolationBuzz = 0;
-				indexFrameBuzz = indexFrameBuzzNext;
-				indexFrameBuzzNext++;
-			}
-			if(indexFrameBuzzNext > keyFramesBuzz.size() - 1)
-				indexFrameBuzzNext = 0;
-			modelMatrixBuzz = interpolate(keyFramesBuzz, indexFrameBuzz, indexFrameBuzzNext, 0, interpolationBuzz);
-		}
 		
 		/**********Maquinas de estado*************/
 		// Maquina de estados para el carro eclipse
