@@ -68,7 +68,6 @@ vec3 calculateDirectionalLight(Light light, vec3 direction){
 		tiledCoords = scaleUV * tiledCoords;
 	
 	vec4 blendMapColor = texture(blendMapTexture, our_uv);
-	// Cantidad de color que hay en un pixel
 	float backTextureAmount = 1 - (blendMapColor.r + blendMapColor.g + blendMapColor.b);
 	vec4 backgroundTextureColor = texture(backgroundTexture, tiledCoords) * backTextureAmount;
 	vec4 rTextureColor = texture(rTexture, tiledCoords) * blendMapColor.r;
@@ -80,22 +79,22 @@ vec3 calculateDirectionalLight(Light light, vec3 direction){
 	//vec4 totalColor = backgroundTextureColor;
 
 	// Ambient
-	vec3 ambient  = light.ambient * vec3(totalColor);
-	
-	// Diffuse 
-	vec3 normal = normalize(our_normal);
-	vec3 lightDir = normalize(-direction);
-	float diff = max(dot(normal, lightDir), 0.0);
-	vec3 diffuse  = light.diffuse * (diff * vec3(totalColor));
-	
-	// Specular
-	float specularStrength = 0.5f;
-	vec3 viewDir = normalize(viewPos - fragPos);
-	vec3 reflectDir = reflect(-lightDir, normal);
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-	vec3 specular = light.specular * (spec * vec3(totalColor));  
-			
-	return (ambient + diffuse + specular);
+    vec3 ambient  = light.ambient * vec3(totalColor);
+  	
+    // Diffuse 
+    vec3 normal = normalize(our_normal);
+    vec3 lightDir = normalize(-direction);
+    float diff = max(dot(normal, lightDir), 0.0);
+    vec3 diffuse  = light.diffuse * (diff * vec3(totalColor));
+    
+    // Specular
+    float specularStrength = 0.5f;
+    vec3 viewDir = normalize(viewPos - fragPos);
+    vec3 reflectDir = reflect(-lightDir, normal);  
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    vec3 specular = light.specular * (spec * vec3(totalColor));  
+        
+    return (ambient + diffuse + specular);
 }
 
 vec3 calculatePointLights(){

@@ -50,8 +50,7 @@ Shader shader;
 Shader shaderSkybox;
 //Shader con multiples luces
 Shader shaderMulLighting;
-
-// Shader para el terreno
+//Shader para el terreno
 Shader shaderTerrain;
 
 std::shared_ptr<FirstPersonCamera> camera(new FirstPersonCamera());
@@ -104,11 +103,24 @@ Model cowboyModelAnimate;
 Model guardianModelAnimate;
 // Cybog
 Model cyborgModelAnimate;
+
+// Modelos animados
+Model modelKakashiDescanso;
+Model modelKakashiCorriendo;
+Model modelKakashibreakdance;
+
+// Variable para controlar que animacion de kakashi
+glm::vec3 kakashiPosition = glm::vec3(0.0f);
+float rotacionKakashi = 0.0f;
+int kakashiState = 0;
+float velocidadKakashi = 5.0f;
+float velocidadRotacionKakashi = 0.1f;
+
 // Terrain model instance
-Terrain terrain(-1, -1, 200, 8, "../Textures/heightmap.png");
+Terrain terrain(-1, -1, 200, 32, "../Textures/heightmap_practica04.png");
 
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
-GLuint textureTerrainID, textureTerrainBlendMapID, textureTerrainRID, textureTerrainGID, textureTerrainBID;
+GLuint textureTerrainRID, textureTerrainGID, textureTerrainBID,textureTerrainBlendMapID;
 GLuint skyboxTextureID;
 
 GLenum types[6] = {
@@ -119,13 +131,19 @@ GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
 GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
 GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
 
-std::string fileNames[6] = { "../Textures/mp_bloodvalley/blood-valley_ft.tga",
+std::string fileNames[6] = {/*  "../Textures/mp_bloodvalley/blood-valley_ft.tga",
 		"../Textures/mp_bloodvalley/blood-valley_bk.tga",
 		"../Textures/mp_bloodvalley/blood-valley_up.tga",
 		"../Textures/mp_bloodvalley/blood-valley_dn.tga",
 		"../Textures/mp_bloodvalley/blood-valley_rt.tga",
-		"../Textures/mp_bloodvalley/blood-valley_lf.tga" };
-
+		"../Textures/mp_bloodvalley/blood-valley_lf.tga"  */
+		"../Textures/skybox/skyrender0001.tga",
+		"../Textures/skybox/skyrender0004.tga",
+		"../Textures/skybox/skyrender0003.tga",
+		"../Textures/skybox/skyrender0006.tga",
+		"../Textures/skybox/skyrender0005.tga",
+		"../Textures/skybox/skyrender0002.tga"
+		};
 bool exitApp = false;
 int lastMousePosX, offsetX = 0;
 int lastMousePosY, offsetY = 0;
@@ -142,6 +160,9 @@ glm::mat4 modelMatrixMayow = glm::mat4(1.0f);
 glm::mat4 modelMatrixCowboy = glm::mat4(1.0f);
 glm::mat4 modelMatrixGuardian = glm::mat4(1.0f);
 glm::mat4 modelMatrixCyborg = glm::mat4(1.0f);
+
+// Model matrix para kakashi
+glm::mat4 modelMatrixKakashi = glm::mat4(1.0f);
 
 int animationMayowIndex = 1;
 float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRightArm = 0.0, rotDartRightHand = 0.0, rotDartLeftLeg = 0.0, rotDartRightLeg = 0.0;
@@ -245,7 +266,8 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	glfwSetKeyCallback(window, keyCallback);
 	glfwSetCursorPosCallback(window, mouseCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+	//glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// Init glew
 	glewExperimental = GL_TRUE;
@@ -265,9 +287,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	shader.initialize("../Shaders/colorShader.vs", "../Shaders/colorShader.fs");
 	shaderSkybox.initialize("../Shaders/skyBox.vs", "../Shaders/skyBox.fs");
 	shaderMulLighting.initialize("../Shaders/iluminacion_textura_animation.vs", "../Shaders/multipleLights.fs");
-
-	// Inicializamos el shader vinculandolo con el archivo
-	shaderTerrain.initialize("../Shaders/iluminacion_textura_animation.vs", "../Shaders/terrain.fs");
+	shaderTerrain.initialize("../Shaders/terrain.vs", "../Shaders/terrain.fs");
 
 	// Inicializacion de los objetos.
 	skyboxSphere.init();
@@ -366,6 +386,19 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	cowboyModelAnimate.loadModel("../models/cowboy/Character Running.fbx");
 	cowboyModelAnimate.setShader(&shaderMulLighting);
 
+	// Kakashi animado
+	modelKakashiDescanso.loadModel("../models/kakashi/KakashiAnimado3.fbx");
+	modelKakashiDescanso.setShader(&shaderMulLighting);
+
+	modelKakashiCorriendo.loadModel("../models/kakashi/KakashiRigIK0.fbx");
+	modelKakashiCorriendo.setShader(&shaderMulLighting);
+
+	modelKakashibreakdance.loadModel("../models/kakashi/KakashiBailando2.fbx");
+	modelKakashibreakdance.setShader(&shaderMulLighting);
+
+	terrain.init();
+	terrain.setShader(&shaderMulLighting);
+	
 	// Guardian
 	guardianModelAnimate.loadModel("../models/boblampclean/boblampclean.md5mesh");
 	guardianModelAnimate.setShader(&shaderMulLighting);
@@ -378,7 +411,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	terrain.init();
 	terrain.setShader(&shaderTerrain);
 
-	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
+	camera->setPosition(glm::vec3(0.0, 6.0, 8.0));
 	
 	// Carga de texturas para el skybox
 	Texture skyboxTexture = Texture("");
@@ -403,7 +436,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	}
 
 	// Definiendo la textura a utilizar
-	Texture textureCesped("../Textures/grassy2.png");
+	Texture textureCesped("../Textures/piso.png");
 	// Carga el mapa de bits (FIBITMAP es el tipo de dato de la libreria)
 	textureCesped.loadImage();
 	// Creando la textura con id 1
@@ -520,7 +553,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureHighway.freeImage();
 
 	// Definiendo la textura
-	Texture textureLandingPad("../Textures/grassFlowers.png");
+	Texture textureLandingPad("../Textures/landingPad.jpg");
 	textureLandingPad.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureLandingPadID); // Creando el id de la textura del landingpad
 	glBindTexture(GL_TEXTURE_2D, textureLandingPadID); // Se enlaza la textura
@@ -538,8 +571,9 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 		std::cout << "Fallo la carga de textura" << std::endl;
 	textureLandingPad.freeImage(); // Liberamos memoria
 
+	//Definiendo texturas del mapa de mazclas
 	// Definiendo la textura
-	Texture textureR("../Textures/mud.png");
+	Texture textureR("../Textures/tierra.png");
 	textureR.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureTerrainRID); // Creando el id de la textura del landingpad
 	glBindTexture(GL_TEXTURE_2D, textureTerrainRID); // Se enlaza la textura
@@ -558,7 +592,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureR.freeImage(); // Liberamos memoria
 
 	// Definiendo la textura
-	Texture textureG("../Textures/landingPad.jpg");
+	Texture textureG("../Textures/flores.png");
 	textureG.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureTerrainGID); // Creando el id de la textura del landingpad
 	glBindTexture(GL_TEXTURE_2D, textureTerrainGID); // Se enlaza la textura
@@ -577,7 +611,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureG.freeImage(); // Liberamos memoria
 
 	// Definiendo la textura
-	Texture textureB("../Textures/path.png");
+	Texture textureB("../Textures/camino.png");
 	textureB.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureTerrainBID); // Creando el id de la textura del landingpad
 	glBindTexture(GL_TEXTURE_2D, textureTerrainBID); // Se enlaza la textura
@@ -596,7 +630,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureB.freeImage(); // Liberamos memoria
 
 	// Definiendo la textura
-	Texture textureBlendMap("../Textures/blendMap.png");
+	Texture textureBlendMap("../Textures/blendMap_Practica04.png");
 	textureBlendMap.loadImage(); // Cargar la textura
 	glGenTextures(1, &textureTerrainBlendMapID); // Creando el id de la textura del landingpad
 	glBindTexture(GL_TEXTURE_2D, textureTerrainBlendMapID); // Se enlaza la textura
@@ -607,12 +641,13 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	if(textureBlendMap.getData()){
 		// Transferir los datos de la imagen a la tarjeta
 		glTexImage2D(GL_TEXTURE_2D, 0, textureBlendMap.getChannels() == 3 ? GL_RGB : GL_RGBA, textureBlendMap.getWidth(), textureBlendMap.getHeight(), 0,
-		textureB.getChannels() == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, textureBlendMap.getData());
+		textureBlendMap.getChannels() == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, textureBlendMap.getData());
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 	else 
 		std::cout << "Fallo la carga de textura" << std::endl;
 	textureBlendMap.freeImage(); // Liberamos memoria
+
 }
 
 void destroy() {
@@ -626,6 +661,7 @@ void destroy() {
 	shaderMulLighting.destroy();
 	shaderSkybox.destroy();
 	shaderTerrain.destroy();
+	
 
 	// Basic objects Delete
 	skyboxSphere.destroy();
@@ -670,6 +706,10 @@ void destroy() {
 	guardianModelAnimate.destroy();
 	cyborgModelAnimate.destroy();
 
+	modelKakashiDescanso.destroy();
+	modelKakashiCorriendo.destroy();
+	modelKakashibreakdance.destroy();
+
 	// Terrains objects Delete
 	terrain.destroy();
 
@@ -680,6 +720,10 @@ void destroy() {
 	glDeleteTextures(1, &textureWindowID);
 	glDeleteTextures(1, &textureHighwayID);
 	glDeleteTextures(1, &textureLandingPadID);
+	glDeleteTextures(1, &textureTerrainBID);
+	glDeleteTextures(1, &textureTerrainGID);
+	glDeleteTextures(1, &textureTerrainRID);
+	glDeleteTextures(1, &textureTerrainBlendMapID);
 
 	// Cube Maps Delete
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
@@ -704,10 +748,19 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 void mouseCallback(GLFWwindow *window, double xpos, double ypos) {
-	offsetX = xpos - lastMousePosX;
-	offsetY = ypos - lastMousePosY;
-	lastMousePosX = xpos;
-	lastMousePosY = ypos;
+	static bool firstMouse = true;
+    if (firstMouse) {
+        lastMousePosX = xpos;
+        lastMousePosY = ypos;
+        firstMouse = false;
+    }
+
+    offsetX = xpos - lastMousePosX;
+    offsetY = ypos - lastMousePosY;  // Invertir para que suba con movimiento hacia arriba
+    lastMousePosX = xpos;
+    lastMousePosY = ypos;
+
+    camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
 }
 
 void mouseButtonCallback(GLFWwindow *window, int button, int state, int mod) {
@@ -729,21 +782,54 @@ void mouseButtonCallback(GLFWwindow *window, int button, int state, int mod) {
 
 bool processInput(bool continueApplication) {
 	if (exitApp || glfwWindowShouldClose(window) != 0) {
-		return false;
+        return false;
+    }
+
+
+	// Factor de velocidad para acelerar el movimiento de la cámara
+    float speedMultiplier = 2.0f; // Cambia este valor para aumentar la velocidad
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera->moveFrontCamera(true, deltaTime * speedMultiplier);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera->moveFrontCamera(false, deltaTime * speedMultiplier);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera->moveRightCamera(false, deltaTime * speedMultiplier);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera->moveRightCamera(true, deltaTime * speedMultiplier);
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
+
+    offsetX = 0;
+    offsetY = 0;
+
+	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		kakashiState = 1;
+
+		kakashiPosition.x += sin(rotacionKakashi) * velocidadKakashi;
+    kakashiPosition.z += cos(rotacionKakashi) * velocidadKakashi;
+
+	} else if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_RELEASE) {
+		kakashiState = 0;
+	}
+	
+	if(glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) {
+		kakashiState = 2;
+
+	} else if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_RELEASE) {
+		kakashiState = 0;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera->moveFrontCamera(true, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera->moveFrontCamera(false, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera->moveRightCamera(false, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera->moveRightCamera(true, deltaTime);
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-		camera->mouseMoveCamera(offsetX, offsetY, deltaTime);
-	offsetX = 0;
-	offsetY = 0;
+	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+		// Rotamos a kakashi hacia izquierda
+		rotacionKakashi += velocidadRotacionKakashi; 
+	} 
+
+	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+		// rotamos a kakashi hacia la derecha
+		rotacionKakashi -= velocidadRotacionKakashi; 
+	}
 
 	// Seleccionar modelo
 	if (enableCountSelected && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS){
@@ -933,6 +1019,8 @@ void applicationLoop() {
 
 	modelMatrixCyborg = glm::translate(modelMatrixCyborg, glm::vec3(5.0f, 0.05, 0.0f));
 
+	modelMatrixKakashi = glm::scale(modelMatrixKakashi, glm::vec3(0.01f));
+
 	// Variables to interpolation key frames
 	fileName = "../animaciones/animation_dart_joints.txt";
 	keyFramesDartJoints = getKeyRotFrames(fileName);
@@ -978,7 +1066,7 @@ void applicationLoop() {
 					glm::value_ptr(projection));
 		shaderMulLighting.setMatrix4("view", 1, false,
 				glm::value_ptr(view));
-
+		// Settea la matriz de vista y projection al shader con multiples luces
 		shaderTerrain.setMatrix4("projection", 1, false,
 					glm::value_ptr(projection));
 		shaderTerrain.setMatrix4("view", 1, false,
@@ -1014,31 +1102,25 @@ void applicationLoop() {
 		/*******************************************
 		 * Terrain Cesped
 		 *******************************************/
-		glm::mat4 modelCesped = glm::mat4(1.0);
-		modelCesped = glm::translate(modelCesped, glm::vec3(0.0, 0.0, 0.0));
-		modelCesped = glm::scale(modelCesped, glm::vec3(200.0, 0.001, 200.0));
-
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textureCespedID);
 		shaderTerrain.setInt("backgroundTexture", 0);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, textureTerrainID);
-		shaderTerrain.setInt("backgroundTexture", 1);
+		glBindTexture(GL_TEXTURE_2D, textureTerrainRID);
+		shaderTerrain.setInt("rTexture", 1);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, textureTerrainID);
-		shaderTerrain.setInt("backgroundTexture", 2);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, textureTerrainID);
-		shaderTerrain.setInt("backgroundTexture", 3);
+		glBindTexture(GL_TEXTURE_2D, textureTerrainGID);
+		shaderTerrain.setInt("gTexture", 2);
 		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, textureTerrainBID);
+		shaderTerrain.setInt("bTexture", 3);
+		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, textureTerrainBlendMapID);
-		shaderTerrain.setInt("backgroundTexture", 4);
-
-
-		shaderTerrain.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(80, 80)));
-		terrain.setPosition(glm::vec3(100, 0, 100));
+		shaderTerrain.setInt("blendMapTexture", 4);
+		shaderTerrain.setVectorFloat2("scaleUV",glm::value_ptr(glm::vec2(100.0f)));
+		terrain.setPosition(glm::vec3(100.0f, 0.0f, 100.0f));
 		terrain.render();
-		shaderTerrain.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(0, 0)));
+		shaderTerrain.setVectorFloat2("scaleUV",glm::value_ptr(glm::vec2(1.0f)));
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		/*******************************************
@@ -1223,6 +1305,35 @@ void applicationLoop() {
 		modelMatrixCyborgBody = glm::scale(modelMatrixCyborgBody, glm::vec3(0.009f));
 		cyborgModelAnimate.setAnimationIndex(1);
 		cyborgModelAnimate.render(modelMatrixCyborgBody);
+		
+		//=============================================================Kakashi==============================================================
+		glm::mat4 modelMatrixKakashiBody = glm::mat4(modelMatrixKakashi);
+
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, kakashiPosition);
+		modelMatrixKakashiBody = glm::rotate(modelMatrixKakashiBody, rotacionKakashi, glm::vec3(0.0f, 1.0f, 0.0f));
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, -kakashiPosition);
+
+		// Para mover al personaje
+		modelMatrixKakashiBody = glm::translate(modelMatrixKakashiBody, kakashiPosition);
+		//Ajuste del eje y del objeto
+		modelMatrixKakashiBody[3][1] = terrain.getHeightTerrain(modelMatrixKakashiBody[3][0], modelMatrixKakashiBody[3][2]);
+
+
+		switch ( kakashiState) {
+			case 0:
+				modelKakashiDescanso.render(modelMatrixKakashiBody);
+				break;
+			case 1:
+				modelKakashiCorriendo.render(modelMatrixKakashiBody);
+				break;
+			case 2:
+				modelKakashibreakdance.render(modelMatrixKakashiBody);
+				break;
+			
+			default:
+				break;
+		}
+
 
 		/*******************************************
 		 * Skybox
