@@ -30,7 +30,10 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     include_directories(${CMAKE_SOURCE_DIR}/CGALib/include)
 endif()
 
-add_executable(06-CameraTPS ./src/main.cpp)
+add_executable(06-CameraTPS
+    ./src/main.cpp
+    ./src/Game.cpp  # Agregar Game.cpp aquí
+)
 
 set_target_properties(06-CameraTPS
     PROPERTIES

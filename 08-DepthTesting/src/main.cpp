@@ -1675,12 +1675,32 @@ void applicationLoop() {
 			glm::vec3(0.05, maxDistanceRay, 0.05));
 		rayModel.render(modelMatrixRayMay);
 
+
+		glm::vec3 o = glm::unProject(
+			glm::vec3(
+				lastMousePosX, 
+				screenHeight - lastMousePosY,  // hacemos una resta porque las coordenadas al reves
+				0.0f
+			),
+			view, 
+			projection,
+			glm::vec4(0.0, 0.0, screenWidth, screenHeight) // viewport
+		);
+
+		glm::vec3 t = glm::unProject(
+			glm::vec3(lastMousePosX, screenHeight - lastMousePosY, 1.0f), 
+			view,
+			projection,
+			glm::vec4(0.0, 0.0, screenWidth, screenHeight) // viewport
+		);
+
+		glm::vec3 d = glm::normalize(t - o);
+
 		std::map<std::string, std::tuple<AbstractModel::SBB, glm::mat4, glm::mat4>>::
 			iterator itSBB;
 		for (itSBB = collidersSBB.begin(); itSBB != collidersSBB.end(); itSBB++) {
 			float tRint;
-			if (raySphereIntersect(ori, targetRay, rayDirection,
-				std::get<0>(itSBB->second), tRint)) {
+			if (raySphereIntersect(ori, targetRay, rayDirection, std::get<0>(itSBB->second), tRint)) {
 				std::cout << "Collision del rayo con el modelo " << itSBB->first 
 				<< std::endl;
 			}

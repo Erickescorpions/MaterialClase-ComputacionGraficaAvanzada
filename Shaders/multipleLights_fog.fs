@@ -106,4 +106,5 @@ void main()
 	if(colorText.a < 0.1)
 		discard;
     color = vec4(calculateDirectionalLight(directionalLight.light, directionalLight.direction) + calculatePointLights() + calculateSpotLights(), colorText.a);
+	color = mix(vec4(fogColor, 1.0, color, visibility));
 }
